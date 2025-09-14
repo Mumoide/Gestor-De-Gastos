@@ -8,14 +8,14 @@ public class Expense {
     private String name;
     private LocalDate date;
     private int amount;
-    private String type;
+    private Category type;
     private String note;
 
 
     public Expense() {
     }
 
-    public Expense(UUID id, String name, LocalDate date, int amount, String type, String note) {
+    public Expense(UUID id, String name, LocalDate date, int amount, Category type, String note) {
 
         this.id = id;
         this.name = name;
@@ -53,11 +53,11 @@ public class Expense {
         this.amount = amount;
     }
 
-    public String getType() {
+    public Category getType() {
         return type;
     }
 
-    public void setType(String type) {
+    public void setType(Category type) {
         this.type = type;
     }
 

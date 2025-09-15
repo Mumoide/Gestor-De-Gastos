@@ -7,9 +7,9 @@ Stack
 - Java 17+
 
 Roadmap
-- Agregar filtro por mes en listado de gastos. 
-- Editar y eliminar por ID.
-- Reporte mensual por categoría y total.
-- Exportar a CSV.
+- ~~Agregar filtro por mes en listado de gastos.~~
+- ~~Editar y eliminar por ID.~~
+- ~~Reporte mensual por categoría y total.~~
+- Exportar a CSV. WIP
 - Tests con JUnit.
 - Manejo de errores y validaciones más amigables.

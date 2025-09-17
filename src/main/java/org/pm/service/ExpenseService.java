@@ -6,8 +6,8 @@ import com.google.gson.TypeAdapter;
 import com.google.gson.reflect.TypeToken;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
-import org.pm.model.Expenses.Category;
-import org.pm.model.Expenses.Expense;
+import org.pm.model.Expense.Category;
+import org.pm.model.Expense.Expense;
 import org.pm.model.SummaryExpenses.SummaryExpenses;
 import org.pm.repository.ExpenseRepository;
 import util.ConsoleTable;
@@ -18,12 +18,69 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.lang.reflect.Type;
 import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import java.util.*;
 
 public class ExpenseService implements ExpenseRepository {
     static File theFile = new File("data/expenses.json");
     private static Scanner SC = new Scanner(System.in);
     private static final String CREATE_FILE_MSG = "Error al crear el archivo ";
+
+    public void exportJsonToCSVPlanillable() {
+        var client = new org.pm.export.client.ExpenseConverterClient();
+        var exportService = new org.pm.export.service.ExportService(client);
+
+        ArrayList<Expense> list = listExpenses();
+
+        List<Expense> filtered = list.stream()
+                .filter(Expense::isPlanillable)
+                .toList();
+
+        boolean ok = exportService.exportToCsvRemote(filtered);
+        System.out.println(ok ? "Export OK" : "Export failed");
+
+        list.forEach(e -> e.setPlanillable(false));
+
+        updateExpenses(theFile, list);
+        System.out.println("Planillable expenses updated to non planillable.");
+    }
+
+    public void exportJsonToCSV() {
+        var client = new org.pm.export.client.ExpenseConverterClient();
+        var exportService = new org.pm.export.service.ExportService(client);
+
+        List<Expense> list = listExpenses();
+        boolean ok = exportService.exportToCsvRemote(list);
+        System.out.println(ok ? "Export OK" : "Export failed");
+    }
+
+
+    public void exportToCSVByDate() {
+        LocalDate start = readDate("Ingrese la fecha inicial (YYYY-MM-DD): ");
+        LocalDate end   = readDate("Ingrese la fecha final  (YYYY-MM-DD): ");
+
+        // if user flipped the range, fix it
+        if (end.isBefore(start)) {
+            LocalDate tmp = start; start = end; end = tmp;
+        }
+
+        var client = new org.pm.export.client.ExpenseConverterClient();
+        var exportService = new org.pm.export.service.ExportService(client);
+
+        List<Expense> list = listExpenses();
+
+        LocalDate finalStart = start;
+        LocalDate finalEnd = end;
+        List<Expense> filtered = list.stream()
+                .filter(e -> {
+                    LocalDate d = e.getDate();
+                    return d != null && !d.isBefore(finalStart) && !d.isAfter(finalEnd); // inclusive
+                })
+                .toList();
+        boolean ok = exportService.exportToCsvRemote(filtered);
+        System.out.println(ok ? "Export OK" : "Export failed");
+    }
+
     @Override
     public void monthlySummary() {
         ArrayList<Expense> list = listExpenses();
@@ -122,6 +179,21 @@ public class ExpenseService implements ExpenseRepository {
         int amount = Integer.parseInt(SC.nextLine());
         System.out.print("Ingresa la categoria del gasto: ");
         Category type = promptCategory();
+
+        boolean isPlanillable;
+
+        while (true) {
+            System.out.println("El gasto es planillable?");
+            System.out.println("1) Si");
+            System.out.println("2) No");
+            String opt = SC.nextLine().trim();
+
+            if ("1".equals(opt)) { isPlanillable = true; break; }
+            if ("2".equals(opt)) { isPlanillable = false; break; }
+
+            System.out.println("Opcion invalida");
+        }
+
         System.out.print("(Opcional) Ingresa las notas del gasto: ");
         String note = SC.nextLine().trim();
 
@@ -134,7 +206,8 @@ public class ExpenseService implements ExpenseRepository {
                         date,
                         amount,
                         type,
-                        note);
+                        note,
+                        isPlanillable);
                 expenses.set(i, expense);
             }
         }
@@ -163,11 +236,11 @@ public class ExpenseService implements ExpenseRepository {
     }
 
     @Override
-    public void save(String name, LocalDate date, int amount, Category type, String note) {
+    public void save(String name, LocalDate date, int amount, Category type, String note, boolean isPlanillable) {
         if (amount <= 0) {
             throw new IllegalArgumentException("El monto debe ser positivo.");
         }
-        Expense expense = new Expense(UUID.randomUUID(),name, date, amount, type, note);
+        Expense expense = new Expense(UUID.randomUUID(),name, date, amount, type, note, isPlanillable);
         ArrayList<Expense> list = new ArrayList<>();
         list.add(expense);
         addExpense(theFile, list);
@@ -382,10 +455,10 @@ public class ExpenseService implements ExpenseRepository {
 
     public static Category promptCategory() {
         while (true) {
-            System.out.println("Categorias");
-            for (Category c : Category.values()) {
-                System.out.println(c);
-            }
+            //System.out.println("Categorias");
+            //for (Category c : Category.values()) {
+            //    System.out.println(c);
+            //}
             System.out.println("Categorías: " + Arrays.toString(Category.values()));
             //System.out.print("Elige categoría [q para cancelar]: ");
             String s = SC.nextLine().trim();
@@ -394,6 +467,18 @@ public class ExpenseService implements ExpenseRepository {
                 return Category.valueOf(s.toUpperCase(Locale.ROOT));
             } catch (Exception _) {
                 System.out.println("Categoría inválida.");
+            }
+        }
+    }
+
+    private static LocalDate readDate(String prompt) {
+        while (true) {
+            System.out.print(prompt);
+            String s = SC.nextLine().trim();
+            try {
+                return LocalDate.parse(s); // expects YYYY-MM-DD
+            } catch (DateTimeParseException ex) {
+                System.out.println("Formato inválido. Usa YYYY-MM-DD (ej: 2025-08-12).");
             }
         }
     }

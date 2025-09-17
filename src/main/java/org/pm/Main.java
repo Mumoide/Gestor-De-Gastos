@@ -1,12 +1,13 @@
 package org.pm;
 
-import org.pm.model.Expenses.Category;
-import org.pm.model.Expenses.Expense;
+import org.pm.model.Expense.Category;
+import org.pm.model.Expense.Expense;
 import org.pm.service.ExpenseService;
 import util.ConsoleTable;
 
 import java.io.File;
 import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
@@ -42,7 +43,7 @@ public class Main {
                 case "3" -> editExpense();
                 case "4" -> removeExpense();
                 case "5" -> monthlySummary();
-                case "6" -> System.out.println("Ingresaste a agregar gasto");
+                case "6" -> exportToCSV();
                 case "0" -> running = false;
                 default -> System.out.println("Opcion invalida");
             }
@@ -68,17 +69,29 @@ public class Main {
         expenseService.editExpenses();
     }
     public static void addExpenseMessage(){
-        System.out.print("Ingresa el nombre del gasto: ");
+        System.out.println("Ingresa el nombre del gasto: ");
         String name = SC.nextLine().trim();
-        System.out.print("Ingresa la fecha del gasto (YYYY-MM-DD): ");
+        System.out.println("Ingresa la fecha del gasto (YYYY-MM-DD): ");
         LocalDate date = LocalDate.parse(SC.nextLine());
-        System.out.print("Ingresa la cantidad del gasto: ");
+        System.out.println("Ingresa la cantidad del gasto: ");
         int amount = Integer.parseInt(SC.nextLine());
-        Category type = expenseService.promptCategory();
-        System.out.print("(Opcional) Ingresa las notas del gasto: ");
-        String note = SC.nextLine().trim();
+        Category type = ExpenseService.promptCategory();
+        boolean isPlanillable;
 
-        expenseService.save(name, date, amount, type, note);
+        while (true) {
+            System.out.println("El gasto es planillable?");
+            System.out.println("1) Si");
+            System.out.println("2) No");
+            String opt = SC.nextLine().trim();
+
+            if ("1".equals(opt)) { isPlanillable = true; break; }
+            if ("2".equals(opt)) { isPlanillable = false; break; }
+
+            System.out.println("Opcion invalida");
+        }
+        System.out.println("(Opcional) Ingresa las notas del gasto: ");
+        String note = SC.nextLine().trim();
+        expenseService.save(name, date, amount, type, note, isPlanillable);
         System.out.println("Gasto agregado.");
 
     }
@@ -86,12 +99,13 @@ public class Main {
     public static void listExpenses(){
         List<Expense> list = expenseService.getDynamicExpenses();
 
-        ConsoleTable t = new ConsoleTable(List.of("Fecha", "Monto", "Categoría", "Nota"));
+        ConsoleTable t = new ConsoleTable(List.of("Fecha", "Monto", "Categoría", "Planillable", "Nota"));
         for (Expense e : list) {
             t.addRow(List.of(
                     e.getDate().toString(),
                     String.valueOf(e.getAmount()),
                     String.valueOf(e.getType()),
+                    String.valueOf(e.isPlanillable()),
                     e.getNote() == null ? "" : e.getNote()
             ));
         }
@@ -105,4 +119,26 @@ public class Main {
     public static void monthlySummary(){
         expenseService.monthlySummary();
     }
+
+    public static void exportToCSV() {
+        String opt;
+
+        do  {
+            System.out.println("1) Por fecha");
+            System.out.println("2) Por lapla");
+            System.out.println("3) Todo");
+            System.out.println("0) Volver");
+            opt = SC.nextLine().trim();
+
+            switch (opt){
+                case "1" -> expenseService.exportToCSVByDate();
+                case "2" -> expenseService.exportJsonToCSVPlanillable();
+                case "3" -> expenseService.exportJsonToCSV();
+                case "0" -> System.out.println("Volviendo al menu principal");
+                default -> System.out.println("Opcion invalida");
+            }
+        } while (!opt.equals("1") && !opt.equals("2") && !opt.equals("3") && !opt.equals("0"));
+    }
+
+
 }

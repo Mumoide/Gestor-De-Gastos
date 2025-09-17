@@ -1,4 +1,4 @@
-package org.pm.model.Expenses;
+package org.pm.model.Expense;
 
 public enum Category {
     COMIDA,

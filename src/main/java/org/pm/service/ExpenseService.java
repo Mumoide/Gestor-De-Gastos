@@ -180,19 +180,7 @@ public class ExpenseService implements ExpenseRepository {
         System.out.print("Ingresa la categoria del gasto: ");
         Category type = promptCategory();
 
-        boolean isPlanillable;
-
-        while (true) {
-            System.out.println("El gasto es planillable?");
-            System.out.println("1) Si");
-            System.out.println("2) No");
-            String opt = SC.nextLine().trim();
-
-            if ("1".equals(opt)) { isPlanillable = true; break; }
-            if ("2".equals(opt)) { isPlanillable = false; break; }
-
-            System.out.println("Opcion invalida");
-        }
+        boolean isPlanillable = planillableValidation();
 
         System.out.print("(Opcional) Ingresa las notas del gasto: ");
         String note = SC.nextLine().trim();
@@ -236,25 +224,34 @@ public class ExpenseService implements ExpenseRepository {
     }
 
     @Override
-    public void save(String name, LocalDate date, int amount, Category type, String note, boolean isPlanillable) {
-        if (amount <= 0) {
-            throw new IllegalArgumentException("El monto debe ser positivo.");
-        }
-        Expense expense = new Expense(UUID.randomUUID(),name, date, amount, type, note, isPlanillable);
-        ArrayList<Expense> list = new ArrayList<>();
-        list.add(expense);
-        addExpense(theFile, list);
+    public void save() {
+        addExpense(theFile);
     }
 
-    private static void addExpense(File theFile, ArrayList<Expense> list) {
+    private static void addExpense(File theFile) {
         try{
-            ArrayList<Expense> listExpenses = getAll();
-            FileWriter fileWriter = new FileWriter(theFile);
+            String name = nameValidation();
+            LocalDate date = dateValidation();
+            int amount = amountValidation();
+
+            Category type = promptCategory();
+            boolean isPlanillable = planillableValidation();
+
+            System.out.println("(Opcional) Ingresa las notas del gasto: ");
+            String note = SC.nextLine().trim();
+
+            Expense expense = new Expense(UUID.randomUUID(),name, date, amount, type, note, isPlanillable);
+
+            ArrayList<Expense> list = new ArrayList<>();
+            list.add(expense);
 
             Gson gson = customGson();
+            ArrayList<Expense> listExpenses = getAll();
             listExpenses.addAll(list);
+            FileWriter fileWriter = new FileWriter(theFile);
             gson.toJson(listExpenses, fileWriter);
             fileWriter.close();
+            System.out.println("Gasto agregado.");
         } catch (IOException e) {
             System.err.println(CREATE_FILE_MSG + e.getMessage());
         }
@@ -480,6 +477,62 @@ public class ExpenseService implements ExpenseRepository {
             } catch (DateTimeParseException ex) {
                 System.out.println("Formato inválido. Usa YYYY-MM-DD (ej: 2025-08-12).");
             }
+        }
+    }
+
+    private static LocalDate dateValidation(){
+        while (true) {
+            try {
+                System.out.println("Ingresa la fecha del gasto (YYYY-MM-DD): ");
+                String date = SC.nextLine();
+                date = date.replace("/", "-");
+                return LocalDate.parse(date);
+            } catch (DateTimeParseException e){
+                System.out.println("Fecha inválida, favor ingresar formato YYYY-MM-DD");
+            }
+        }
+    }
+
+    private static int amountValidation(){
+        while (true) {
+            try{
+                System.out.println("Ingresa la cantidad del gasto: ");
+
+                int amount = Integer.parseInt(SC.nextLine());
+                if (amount <1){System.out.println("Monto inválido, debe ser un número mayor a 0."); continue;}
+                return amount;
+            } catch (NumberFormatException _){
+                System.out.println("Monto inválido, debe ser un número mayor a 0.");
+            }
+        }
+    }
+
+    private static String nameValidation() {
+        while(true){
+            try{
+                System.out.println("Ingresa el nombre del gasto: ");
+                String name = SC.nextLine().trim();
+                if (!name.isEmpty()){return name;}
+                System.out.println("Favor ingresar un valor.");
+            } catch (Exception e){
+                System.out.println("Se genero un error con el ingreso del gasto.");
+            }
+
+        }
+    }
+
+    private static boolean planillableValidation(){
+        while (true) {
+            boolean isPlanillable;
+            System.out.println("El gasto es planillable?");
+            System.out.println("1) Si");
+            System.out.println("2) No");
+            String opt = SC.nextLine().trim();
+
+            if ("1".equals(opt)) { isPlanillable = true; return isPlanillable; }
+            if ("2".equals(opt)) { isPlanillable = false; return isPlanillable; }
+
+            System.out.println("Opcion invalida");
         }
     }
 }

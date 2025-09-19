@@ -68,41 +68,16 @@ public class Main {
     public static void editExpense(){
         expenseService.editExpenses();
     }
-    public static void addExpenseMessage(){
-        System.out.println("Ingresa el nombre del gasto: ");
-        String name = SC.nextLine().trim();
-        System.out.println("Ingresa la fecha del gasto (YYYY-MM-DD): ");
-        LocalDate date = LocalDate.parse(SC.nextLine());
-        System.out.println("Ingresa la cantidad del gasto: ");
-        int amount = Integer.parseInt(SC.nextLine());
-        Category type = ExpenseService.promptCategory();
-        boolean isPlanillable;
-
-        while (true) {
-            System.out.println("El gasto es planillable?");
-            System.out.println("1) Si");
-            System.out.println("2) No");
-            String opt = SC.nextLine().trim();
-
-            if ("1".equals(opt)) { isPlanillable = true; break; }
-            if ("2".equals(opt)) { isPlanillable = false; break; }
-
-            System.out.println("Opcion invalida");
-        }
-        System.out.println("(Opcional) Ingresa las notas del gasto: ");
-        String note = SC.nextLine().trim();
-        expenseService.save(name, date, amount, type, note, isPlanillable);
-        System.out.println("Gasto agregado.");
-
-    }
+    public static void addExpenseMessage(){ expenseService.save(); }
 
     public static void listExpenses(){
         List<Expense> list = expenseService.getDynamicExpenses();
 
-        ConsoleTable t = new ConsoleTable(List.of("Fecha", "Monto", "Categoría", "Planillable", "Nota"));
+        ConsoleTable t = new ConsoleTable(List.of("Fecha", "Nombre", "Monto", "Categoría", "Planillable", "Nota"));
         for (Expense e : list) {
             t.addRow(List.of(
                     e.getDate().toString(),
+                    e.getName(),
                     String.valueOf(e.getAmount()),
                     String.valueOf(e.getType()),
                     String.valueOf(e.isPlanillable()),
@@ -139,6 +114,5 @@ public class Main {
             }
         } while (!opt.equals("1") && !opt.equals("2") && !opt.equals("3") && !opt.equals("0"));
     }
-
 
 }
